@@ -3,6 +3,7 @@ package version
 import (
 	"fmt"
 	"runtime"
+	"runtime/debug"
 )
 
 var (
@@ -23,10 +24,38 @@ type Info struct {
 
 // Get returns version information
 func Get() Info {
+	version := Version
+	gitCommit := GitCommit
+	buildDate := BuildDate
+
+	// If version wasn't set via ldflags, try to get it from module info
+	if version == "dev" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			// Check if this is a tagged version from go install
+			if info.Main.Version != "(devel)" && info.Main.Version != "" {
+				version = info.Main.Version
+			}
+			
+			// Try to get commit and build info from VCS
+			for _, setting := range info.Settings {
+				switch setting.Key {
+				case "vcs.revision":
+					if gitCommit == "unknown" && len(setting.Value) >= 8 {
+						gitCommit = setting.Value[:8]
+					}
+				case "vcs.time":
+					if buildDate == "unknown" {
+						buildDate = setting.Value
+					}
+				}
+			}
+		}
+	}
+
 	return Info{
-		Version:   Version,
-		GitCommit: GitCommit,
-		BuildDate: BuildDate,
+		Version:   version,
+		GitCommit: gitCommit,
+		BuildDate: buildDate,
 		GoVersion: runtime.Version(),
 		Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 	}
