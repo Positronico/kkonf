@@ -1,6 +1,15 @@
 # kkonf - kubectl Config Manager
 
+[![Latest Release](https://img.shields.io/github/release/positronico/kkonf.svg)](https://github.com/positronico/kkonf/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/positronico/kkonf/total.svg)](https://github.com/positronico/kkonf/releases)
+
 `kkonf` is an interactive CLI tool for managing kubectl configuration files with a focus on user consolidation and simplified management of clusters, users, and contexts.
+
+## 📥 Quick Download
+
+**→ [Download pre-built binaries from GitHub Releases](https://github.com/positronico/kkonf/releases/latest) ←**
+
+Choose the appropriate binary for your platform (Linux, macOS, Windows) from the latest release page.
 
 ## Features
 
@@ -18,19 +27,37 @@
 
 ## Installation
 
-### Prerequisites
-- Go 1.21 or higher
+### Option 1: Download Pre-built Binaries (Recommended)
 
-### Build from source
+**→ [Go to Releases Page](https://github.com/positronico/kkonf/releases/latest) ←**
+
+1. Download the appropriate binary for your platform:
+   - **Linux**: `kkonf-v1.1.0-linux-amd64.tar.gz` or `kkonf-v1.1.0-linux-arm64.tar.gz`
+   - **macOS**: `kkonf-v1.1.0-darwin-amd64.tar.gz` or `kkonf-v1.1.0-darwin-arm64.tar.gz`  
+   - **Windows**: `kkonf-v1.1.0-windows-amd64.zip`
+
+2. Extract and run:
+   ```bash
+   # Linux/macOS
+   tar -xzf kkonf-v*.tar.gz
+   ./kkonf
+   
+   # Windows
+   # Extract the .zip file and run kkonf.exe
+   ```
+
+### Option 2: Install with Go
+```bash
+go install github.com/positronico/kkonf@latest
+```
+
+### Option 3: Build from Source
+**Prerequisites:** Go 1.21 or higher
+
 ```bash
 git clone https://github.com/positronico/kkonf.git
 cd kkonf
-go build -o kkonf
-```
-
-### Install globally
-```bash
-go install github.com/positronico/kkonf@latest
+make build  # or: go build -o kkonf
 ```
 
 ## Usage
@@ -51,7 +78,7 @@ kkonf --no-color
 
 ### Main Menu
 ```
-⚙️ kkonf - kubectl Config Manager
+⚙️ kkonf v1.1.0 - kubectl Config Manager
 
 📁 Config file: /Users/user/.kube/config
 🎯 Current context: production-cluster
