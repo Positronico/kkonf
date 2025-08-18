@@ -81,7 +81,7 @@ jobs:
       run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
     
     - name: Create Release
-      uses: gh-release@v1
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.version.outputs.VERSION }}
         name: Release ${{ steps.version.outputs.VERSION }}
@@ -120,4 +120,3 @@ jobs:
           
           See the [README](https://github.com/positronico/kkonf#readme) for detailed documentation.
         files: ./artifacts/*/*
-        token: ${{ secrets.GITHUB_TOKEN }}
