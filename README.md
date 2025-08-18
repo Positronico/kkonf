@@ -32,9 +32,9 @@ Choose the appropriate binary for your platform (Linux, macOS, Windows) from the
 **→ [Go to Releases Page](https://github.com/positronico/kkonf/releases/latest) ←**
 
 1. Download the appropriate binary for your platform:
-   - **Linux**: `kkonf-v1.1.0-linux-amd64.tar.gz` or `kkonf-v1.1.0-linux-arm64.tar.gz`
-   - **macOS**: `kkonf-v1.1.0-darwin-amd64.tar.gz` or `kkonf-v1.1.0-darwin-arm64.tar.gz`  
-   - **Windows**: `kkonf-v1.1.0-windows-amd64.zip`
+   - **Linux**: `kkonf-v1.1.1-linux-amd64.tar.gz` or `kkonf-v1.1.1-linux-arm64.tar.gz`
+   - **macOS**: `kkonf-v1.1.1-darwin-amd64.tar.gz` or `kkonf-v1.1.1-darwin-arm64.tar.gz`  
+   - **Windows**: `kkonf-v1.1.1-windows-amd64.zip`
 
 2. Extract and run:
    ```bash
@@ -78,7 +78,7 @@ kkonf --no-color
 
 ### Main Menu
 ```
-⚙️ kkonf v1.1.0 - kubectl Config Manager
+⚙️ kkonf v1.1.1 - kubectl Config Manager
 
 📁 Config file: /Users/user/.kube/config
 🎯 Current context: production-cluster
