@@ -48,7 +48,7 @@ jobs:
           ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
         fi
         
-        go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -o ${BINARY_NAME}
+        go build -ldflags="-s -w -X github.com/positronico/kkonf/internal/version.Version=${{ steps.version.outputs.VERSION }} -X github.com/positronico/kkonf/internal/version.GitCommit=${GITHUB_SHA:0:8} -X github.com/positronico/kkonf/internal/version.BuildDate=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o ${BINARY_NAME}
         
         if [ "$GOOS" = "windows" ]; then
           zip ${ARCHIVE_NAME} ${BINARY_NAME}

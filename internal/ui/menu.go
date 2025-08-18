@@ -7,6 +7,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/positronico/kkonf/internal/config"
 	"github.com/positronico/kkonf/internal/models"
+	"github.com/positronico/kkonf/internal/version"
 )
 type MainMenu struct {
 	configPath string
@@ -110,7 +111,8 @@ func (m *MainMenu) showMainMenu() error {
 	return nil
 }
 func (m *MainMenu) showHeader() {
-	m.colors.Header("\n⚙️ kkonf - kubectl Config Manager")
+	versionInfo := version.Get()
+	m.colors.Header(fmt.Sprintf("\n⚙️ %s - kubectl Config Manager", versionInfo.String()))
 	fmt.Println()
 	fmt.Printf("📁 Config file: %s\n", m.colors.Info(m.configPath))
 	if m.config.CurrentContext != "" {

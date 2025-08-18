@@ -6,12 +6,14 @@ import (
 	"path/filepath"
 
 	"github.com/positronico/kkonf/internal/ui"
+	"github.com/positronico/kkonf/internal/version"
 	"github.com/spf13/cobra"
 )
 
 var (
-	configFile string
-	noColor    bool
+	configFile  string
+	noColor     bool
+	showVersion bool
 )
 
 var rootCmd = &cobra.Command{
@@ -21,6 +23,11 @@ var rootCmd = &cobra.Command{
 It provides CRUD operations for clusters, users, and contexts, with a special
 focus on consolidating duplicate users to simplify configuration management.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if showVersion {
+			fmt.Println(version.Get().Detailed())
+			return nil
+		}
+
 		if configFile == "" {
 			home, err := os.UserHomeDir()
 			if err != nil {
@@ -45,4 +52,5 @@ func Execute() error {
 func init() {
 	rootCmd.Flags().StringVarP(&configFile, "file", "f", "", "path to kubeconfig file (default: ~/.kube/config)")
 	rootCmd.Flags().BoolVar(&noColor, "no-color", false, "disable colored output")
+	rootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "show version information")
 }
