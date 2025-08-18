@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Get version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        BINARY_NAME=kkonf
+        if [ "$GOOS" = "windows" ]; then
+          BINARY_NAME="${BINARY_NAME}.exe"
+        fi
+        
+        ARCHIVE_NAME="kkonf-${{ steps.version.outputs.VERSION }}-${GOOS}-${GOARCH}"
+        if [ "$GOOS" = "windows" ]; then
+          ARCHIVE_NAME="${ARCHIVE_NAME}.zip"
+        else
+          ARCHIVE_NAME="${ARCHIVE_NAME}.tar.gz"
+        fi
+        
+        go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" -o ${BINARY_NAME}
+        
+        if [ "$GOOS" = "windows" ]; then
+          zip ${ARCHIVE_NAME} ${BINARY_NAME}
+        else
+          tar -czf ${ARCHIVE_NAME} ${BINARY_NAME}
+        fi
+        
+        echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
+        echo "BINARY_NAME=${BINARY_NAME}" >> $GITHUB_ENV
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.ARCHIVE_NAME }}
+        path: ${{ env.ARCHIVE_NAME }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ./artifacts
+    
+    - name: Get version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      uses: gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.VERSION }}
+        name: Release ${{ steps.version.outputs.VERSION }}
+        body: |
+          ## kkonf ${{ steps.version.outputs.VERSION }}
+          
+          ### Installation
+          
+          **Download pre-built binaries:**
+          Choose the appropriate binary for your platform from the assets below.
+          
+          **Install with Go:**
+          ```bash
+          go install github.com/positronico/kkonf@${{ steps.version.outputs.VERSION }}
+          ```
+          
+          **Build from source:**
+          ```bash
+          git clone https://github.com/positronico/kkonf.git
+          cd kkonf
+          git checkout ${{ steps.version.outputs.VERSION }}
+          go build -o kkonf
+          ```
+          
+          ### Usage
+          ```bash
+          # Use default kubeconfig
+          kkonf
+          
+          # Use custom config file
+          kkonf -f /path/to/config
+          
+          # Disable colors
+          kkonf --no-color
+          ```
+          
+          See the [README](https://github.com/positronico/kkonf#readme) for detailed documentation.
+        files: ./artifacts/*/*
+        token: ${{ secrets.GITHUB_TOKEN }}
