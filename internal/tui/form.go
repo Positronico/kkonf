@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	"github.com/positronico/kkonf/internal/models"
+	"github.com/positronico/kkonf/v2/internal/models"
 )
 
 type formDoneMsg struct {

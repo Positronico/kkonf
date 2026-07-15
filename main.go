@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/positronico/kkonf/cmd"
+	"github.com/positronico/kkonf/v2/cmd"
 )
 
 func main() {

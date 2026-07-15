@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/positronico/kkonf/internal/models"
+	"github.com/positronico/kkonf/v2/internal/models"
 	"gopkg.in/yaml.v3"
 )
 

@@ -49,7 +49,7 @@ Choose the appropriate binary for your platform (Linux, macOS, Windows) from the
 
 ### Option 2: Install with Go
 ```bash
-go install github.com/positronico/kkonf@latest
+go install github.com/positronico/kkonf/v2@latest
 ```
 
 ### Option 3: Build from Source
@@ -132,8 +132,8 @@ In the TUI: Users screen (`2`), then `c`.
   (each save gets its own backup file)
 - Writes are atomic (temp file + rename), preserve the original file's
   permissions, and follow symlinks instead of replacing them
-- A lock file serializes concurrent writers; stale locks from crashed
-  processes are broken automatically
+- An OS advisory lock serializes concurrent writers and is released by the
+  kernel if the holder crashes — stale locks cannot occur
 - If another tool changed the file since kkonf loaded it, saving asks before
   overwriting
 - `kkonf backup restore` backs up the current state before restoring, so a

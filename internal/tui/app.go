@@ -8,8 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/positronico/kkonf/internal/config"
-	"github.com/positronico/kkonf/internal/version"
+	"github.com/positronico/kkonf/v2/internal/config"
+	"github.com/positronico/kkonf/v2/internal/version"
 )
 
 type section int

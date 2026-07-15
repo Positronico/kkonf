@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/positronico/kkonf/internal/config"
-	"github.com/positronico/kkonf/internal/models"
+	"github.com/positronico/kkonf/v2/internal/config"
+	"github.com/positronico/kkonf/v2/internal/models"
 )
 
 // Session holds the loaded kubeconfig and its persistence machinery. All

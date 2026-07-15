@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/positronico/kkonf/internal/models"
+	"github.com/positronico/kkonf/v2/internal/models"
 	"gopkg.in/yaml.v3"
 )
 

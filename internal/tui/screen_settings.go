@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/positronico/kkonf/internal/settings"
+	"github.com/positronico/kkonf/v2/internal/settings"
 )
 
 type settingsScreen struct {

@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/positronico/kkonf/internal/config"
-	"github.com/positronico/kkonf/internal/models"
-	"github.com/positronico/kkonf/internal/tui"
-	"github.com/positronico/kkonf/internal/version"
+	"github.com/positronico/kkonf/v2/internal/config"
+	"github.com/positronico/kkonf/v2/internal/models"
+	"github.com/positronico/kkonf/v2/internal/tui"
+	"github.com/positronico/kkonf/v2/internal/version"
 	"github.com/spf13/cobra"
 )
 

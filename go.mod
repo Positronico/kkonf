@@ -1,4 +1,4 @@
-module github.com/positronico/kkonf
+module github.com/positronico/kkonf/v2
 
 go 1.25
 

@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/positronico/kkonf/internal/models"
+	"github.com/positronico/kkonf/v2/internal/models"
 	"github.com/spf13/cobra"
 )
 

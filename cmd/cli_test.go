@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/positronico/kkonf/internal/config"
+	"github.com/positronico/kkonf/v2/internal/config"
 	"github.com/stretchr/testify/require"
 )
 

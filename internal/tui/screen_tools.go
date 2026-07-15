@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/positronico/kkonf/internal/config"
-	"github.com/positronico/kkonf/internal/models"
-	"github.com/positronico/kkonf/internal/settings"
+	"github.com/positronico/kkonf/v2/internal/config"
+	"github.com/positronico/kkonf/v2/internal/models"
+	"github.com/positronico/kkonf/v2/internal/settings"
 )
 
 type toolsScreen struct {

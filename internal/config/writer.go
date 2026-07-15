@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
-	"github.com/positronico/kkonf/internal/models"
+	"github.com/positronico/kkonf/v2/internal/models"
 	"gopkg.in/yaml.v3"
 )
 

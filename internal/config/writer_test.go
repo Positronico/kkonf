@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/gofrs/flock"
-	"github.com/positronico/kkonf/internal/models"
+	"github.com/positronico/kkonf/v2/internal/models"
 	"github.com/stretchr/testify/require"
 )
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/positronico/kkonf/internal/config"
+	"github.com/positronico/kkonf/v2/internal/config"
 	"github.com/spf13/cobra"
 )
 

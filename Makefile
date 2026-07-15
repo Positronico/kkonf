@@ -7,7 +7,7 @@ BUILD_DATE ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 
 # Go build settings
 BINARY_NAME = kkonf
-PACKAGE = github.com/positronico/kkonf
+PACKAGE = github.com/positronico/kkonf/v2
 VERSION_PACKAGE = $(PACKAGE)/internal/version
 
 # Build flags
