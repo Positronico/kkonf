@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 
@@ -9,7 +10,8 @@ import (
 )
 
 type Loader struct {
-	filePath string
+	filePath    string
+	fingerprint *Fingerprint
 }
 
 func NewLoader(filePath string) *Loader {
@@ -22,6 +24,14 @@ func (l *Loader) Load() (*models.Config, error) {
 	data, err := os.ReadFile(l.filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	if info, err := os.Stat(l.filePath); err == nil {
+		l.fingerprint = &Fingerprint{
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+			Hash:    sha256.Sum256(data),
+		}
 	}
 
 	var config models.Config
@@ -41,4 +51,10 @@ func (l *Loader) Load() (*models.Config, error) {
 
 func (l *Loader) GetFilePath() string {
 	return l.filePath
+}
+
+// Fingerprint returns the fingerprint of the file as of the last Load,
+// or nil if no successful Load has happened yet.
+func (l *Loader) Fingerprint() *Fingerprint {
+	return l.fingerprint
 }

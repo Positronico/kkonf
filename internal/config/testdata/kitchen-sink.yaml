@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Config
+current-context: prod-east
+x-top-level-unknown: keep-me
+preferences:
+  colors: true
+extensions:
+  - name: top.ext/v1
+    extension:
+      provider: kkonf-test
+clusters:
+  - name: prod-east
+    x-unknown-named-cluster-sibling: keep-me-named-1
+    cluster:
+      server: https://10.0.0.1:6443
+      tls-server-name: kubernetes.prod.internal
+      certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==
+      proxy-url: socks5://proxy.internal:1080
+      disable-compression: true
+      extensions:
+        - name: cluster.ext/v1
+          extension:
+            region: us-east-1
+      x-unknown-cluster-field: keep-me-too
+  - name: dev-local
+    cluster:
+      server: https://localhost:6443
+      insecure-skip-tls-verify: true
+      certificate-authority: /etc/kube/ca.crt
+users:
+  - name: exec-user
+    x-unknown-named-user-sibling: keep-me-named-2
+    user:
+      exec:
+        apiVersion: client.authentication.k8s.io/v1beta1
+        command: gke-gcloud-auth-plugin
+        args:
+          - --use_application_default_credentials
+        env:
+          - name: CLOUDSDK_CORE_PROJECT
+            value: my-project
+            x-unknown-env-field: keep-me-env
+        installHint: Install gke-gcloud-auth-plugin
+        provideClusterInfo: true
+        interactiveMode: IfAvailable
+        x-unknown-exec-field: keep-me-three
+  - name: impersonating-admin
+    user:
+      client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==
+      client-key-data: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCg==
+      as: system:admin
+      as-uid: "1234"
+      as-groups:
+        - system:masters
+        - developers
+      as-user-extra:
+        reason:
+          - audit-trail
+      extensions:
+        - name: user.ext/v1
+          extension:
+            note: hello
+      x-unknown-user-field: keep-me-four
+  - name: token-user
+    user:
+      token: sha256~redacted-example-token
+      x-nested-unknown:
+        deep:
+          list:
+            - 1
+            - 2
+  - name: auth-provider-user
+    user:
+      auth-provider:
+        name: oidc
+        config:
+          client-id: kubernetes
+          idp-issuer-url: https://issuer.example.com
+  - name: basic-user
+    user:
+      username: admin
+      password: hunter2
+      tokenFile: /var/run/secrets/token
+  - name: cert-file-user
+    user:
+      client-certificate: /etc/kube/client.crt
+      client-key: /etc/kube/client.key
+contexts:
+  - name: prod-east
+    x-unknown-named-context-sibling: keep-me-named-3
+    context:
+      cluster: prod-east
+      user: exec-user
+      namespace: payments
+      extensions:
+        - name: ctx.ext/v1
+          extension:
+            team: platform
+      x-unknown-context-field: keep-me-five
+  - name: dev
+    context:
+      cluster: dev-local
+      user: token-user

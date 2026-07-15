@@ -4,8 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"sync/atomic"
 )
+
+// Extra fields tagged `yaml:",inline"` collect keys not matched by any struct
+// field, so unknown or future kubeconfig fields survive a load/save round-trip.
 
 type Config struct {
 	APIVersion     string                 `yaml:"apiVersion"`
@@ -16,136 +19,112 @@ type Config struct {
 	Contexts       []NamedContext         `yaml:"contexts"`
 	Preferences    map[string]interface{} `yaml:"preferences,omitempty"`
 	Extensions     []NamedExtension       `yaml:"extensions,omitempty"`
+	Extra          map[string]interface{} `yaml:",inline"`
 }
 
 type NamedCluster struct {
-	Name    string  `yaml:"name"`
-	Cluster Cluster `yaml:"cluster"`
+	Name    string                 `yaml:"name"`
+	Cluster Cluster                `yaml:"cluster"`
+	Extra   map[string]interface{} `yaml:",inline"`
 }
 
 type Cluster struct {
-	Server                   string `yaml:"server"`
-	CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
-	CertificateAuthority     string `yaml:"certificate-authority,omitempty"`
-	InsecureSkipTLSVerify    bool   `yaml:"insecure-skip-tls-verify,omitempty"`
-	ProxyURL                 string `yaml:"proxy-url,omitempty"`
-	DisableCompression       bool   `yaml:"disable-compression,omitempty"`
+	Server                   string                 `yaml:"server"`
+	TLSServerName            string                 `yaml:"tls-server-name,omitempty"`
+	CertificateAuthorityData string                 `yaml:"certificate-authority-data,omitempty"`
+	CertificateAuthority     string                 `yaml:"certificate-authority,omitempty"`
+	InsecureSkipTLSVerify    bool                   `yaml:"insecure-skip-tls-verify,omitempty"`
+	ProxyURL                 string                 `yaml:"proxy-url,omitempty"`
+	DisableCompression       bool                   `yaml:"disable-compression,omitempty"`
+	Extensions               []NamedExtension       `yaml:"extensions,omitempty"`
+	Extra                    map[string]interface{} `yaml:",inline"`
 }
 
 type NamedUser struct {
-	Name string `yaml:"name"`
-	User User   `yaml:"user"`
+	Name  string                 `yaml:"name"`
+	User  User                   `yaml:"user"`
+	Extra map[string]interface{} `yaml:",inline"`
 }
 
 type User struct {
-	ClientCertificateData string        `yaml:"client-certificate-data,omitempty"`
-	ClientCertificate     string        `yaml:"client-certificate,omitempty"`
-	ClientKeyData         string        `yaml:"client-key-data,omitempty"`
-	ClientKey             string        `yaml:"client-key,omitempty"`
-	Token                 string        `yaml:"token,omitempty"`
-	TokenFile             string        `yaml:"tokenFile,omitempty"`
-	Username              string        `yaml:"username,omitempty"`
-	Password              string        `yaml:"password,omitempty"`
-	Exec                  *ExecConfig   `yaml:"exec,omitempty"`
-	AuthProvider          *AuthProvider `yaml:"auth-provider,omitempty"`
+	ClientCertificateData string                 `yaml:"client-certificate-data,omitempty"`
+	ClientCertificate     string                 `yaml:"client-certificate,omitempty"`
+	ClientKeyData         string                 `yaml:"client-key-data,omitempty"`
+	ClientKey             string                 `yaml:"client-key,omitempty"`
+	Token                 string                 `yaml:"token,omitempty"`
+	TokenFile             string                 `yaml:"tokenFile,omitempty"`
+	Impersonate           string                 `yaml:"as,omitempty"`
+	ImpersonateUID        string                 `yaml:"as-uid,omitempty"`
+	ImpersonateGroups     []string               `yaml:"as-groups,omitempty"`
+	ImpersonateUserExtra  map[string][]string    `yaml:"as-user-extra,omitempty"`
+	Username              string                 `yaml:"username,omitempty"`
+	Password              string                 `yaml:"password,omitempty"`
+	Exec                  *ExecConfig            `yaml:"exec,omitempty"`
+	AuthProvider          *AuthProvider          `yaml:"auth-provider,omitempty"`
+	Extensions            []NamedExtension       `yaml:"extensions,omitempty"`
+	Extra                 map[string]interface{} `yaml:",inline"`
 }
 
 type ExecConfig struct {
-	APIVersion         string            `yaml:"apiVersion,omitempty"`
-	Command            string            `yaml:"command"`
-	Args               []string          `yaml:"args,omitempty"`
-	Env                []ExecEnvVar      `yaml:"env,omitempty"`
-	InstallHint        string            `yaml:"installHint,omitempty"`
-	ProvideClusterInfo bool              `yaml:"provideClusterInfo,omitempty"`
-	InteractiveMode    string            `yaml:"interactiveMode,omitempty"`
+	APIVersion         string                 `yaml:"apiVersion,omitempty"`
+	Command            string                 `yaml:"command"`
+	Args               []string               `yaml:"args,omitempty"`
+	Env                []ExecEnvVar           `yaml:"env,omitempty"`
+	InstallHint        string                 `yaml:"installHint,omitempty"`
+	ProvideClusterInfo bool                   `yaml:"provideClusterInfo,omitempty"`
+	InteractiveMode    string                 `yaml:"interactiveMode,omitempty"`
+	Extra              map[string]interface{} `yaml:",inline"`
 }
 
 type ExecEnvVar struct {
-	Name  string `yaml:"name"`
-	Value string `yaml:"value"`
+	Name  string                 `yaml:"name"`
+	Value string                 `yaml:"value"`
+	Extra map[string]interface{} `yaml:",inline"`
 }
 
 type AuthProvider struct {
 	Name   string                 `yaml:"name"`
 	Config map[string]interface{} `yaml:"config,omitempty"`
+	Extra  map[string]interface{} `yaml:",inline"`
 }
 
 type NamedContext struct {
-	Name    string  `yaml:"name"`
-	Context Context `yaml:"context"`
+	Name    string                 `yaml:"name"`
+	Context Context                `yaml:"context"`
+	Extra   map[string]interface{} `yaml:",inline"`
 }
 
 type Context struct {
-	Cluster    string           `yaml:"cluster"`
-	User       string           `yaml:"user"`
-	Namespace  string           `yaml:"namespace,omitempty"`
-	Extensions []NamedExtension `yaml:"extensions,omitempty"`
+	Cluster    string                 `yaml:"cluster"`
+	User       string                 `yaml:"user"`
+	Namespace  string                 `yaml:"namespace,omitempty"`
+	Extensions []NamedExtension       `yaml:"extensions,omitempty"`
+	Extra      map[string]interface{} `yaml:",inline"`
 }
 
 type NamedExtension struct {
 	Name      string                 `yaml:"name"`
 	Extension map[string]interface{} `yaml:"extension,omitempty"`
+	Extra     map[string]interface{} `yaml:",inline"`
 }
 
+// unhashableSeq makes signatures of unmarshalable users unique per call —
+// a memory address would not be unique (the GC can reuse a freed address
+// mid-loop, which was shown to group different users as duplicates).
+var unhashableSeq atomic.Uint64
+
+// GetSignature hashes the entire user (json.Marshal sorts map keys, so the
+// result is deterministic). Marshaling the whole struct means every field —
+// including impersonation, extensions, and unknown inline extras — takes part
+// in duplicate detection.
 func (u *User) GetSignature() string {
-	data := make(map[string]interface{})
-	
-	if u.ClientCertificateData != "" {
-		data["client-certificate-data"] = u.ClientCertificateData
+	jsonBytes, err := json.Marshal(u)
+	if err != nil {
+		// Unmarshalable extras (e.g. non-string map keys) must never make two
+		// different users hash equal — a unique per-call signature only
+		// disables consolidation for them, which is the safe failure mode.
+		jsonBytes = []byte(fmt.Sprintf("unhashable:%d", unhashableSeq.Add(1)))
 	}
-	if u.ClientCertificate != "" {
-		data["client-certificate"] = u.ClientCertificate
-	}
-	if u.ClientKeyData != "" {
-		data["client-key-data"] = u.ClientKeyData
-	}
-	if u.ClientKey != "" {
-		data["client-key"] = u.ClientKey
-	}
-	if u.Token != "" {
-		data["token"] = u.Token
-	}
-	if u.TokenFile != "" {
-		data["tokenFile"] = u.TokenFile
-	}
-	if u.Username != "" {
-		data["username"] = u.Username
-	}
-	if u.Password != "" {
-		data["password"] = u.Password
-	}
-	
-	if u.Exec != nil {
-		execData := make(map[string]interface{})
-		execData["apiVersion"] = u.Exec.APIVersion
-		execData["command"] = u.Exec.Command
-		execData["args"] = u.Exec.Args
-		execData["env"] = u.Exec.Env
-		execData["installHint"] = u.Exec.InstallHint
-		execData["provideClusterInfo"] = u.Exec.ProvideClusterInfo
-		execData["interactiveMode"] = u.Exec.InteractiveMode
-		data["exec"] = execData
-	}
-	
-	if u.AuthProvider != nil {
-		authData := make(map[string]interface{})
-		authData["name"] = u.AuthProvider.Name
-		authData["config"] = u.AuthProvider.Config
-		data["auth-provider"] = authData
-	}
-	
-	keys := make([]string, 0, len(data))
-	for k := range data {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	
-	sortedData := make(map[string]interface{})
-	for _, k := range keys {
-		sortedData[k] = data[k]
-	}
-	
-	jsonBytes, _ := json.Marshal(sortedData)
 	hash := sha256.Sum256(jsonBytes)
 	return fmt.Sprintf("%x", hash)
 }

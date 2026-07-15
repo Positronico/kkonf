@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"reflect"
 	"strings"
 
 	"github.com/positronico/kkonf/internal/models"
@@ -66,24 +67,24 @@ func (v *Validator) Validate(config *models.Config) *ValidationResult {
 
 func (v *Validator) validateClusters(config *models.Config, result *ValidationResult) {
 	clusterNames := make(map[string]bool)
-	
+
 	for _, cluster := range config.Clusters {
 		if cluster.Name == "" {
 			result.AddError("Cluster", "<unnamed>", "cluster name is required")
 			continue
 		}
-		
+
 		if clusterNames[cluster.Name] {
 			result.AddError("Cluster", cluster.Name, "duplicate cluster name")
 		}
 		clusterNames[cluster.Name] = true
-		
+
 		if cluster.Cluster.Server == "" {
 			result.AddError("Cluster", cluster.Name, "server URL is required")
 		} else if _, err := url.Parse(cluster.Cluster.Server); err != nil {
 			result.AddError("Cluster", cluster.Name, fmt.Sprintf("invalid server URL: %v", err))
 		}
-		
+
 		hasCA := cluster.Cluster.CertificateAuthority != "" || cluster.Cluster.CertificateAuthorityData != ""
 		if !hasCA && !cluster.Cluster.InsecureSkipTLSVerify {
 			result.AddWarning("Cluster", cluster.Name, "no certificate authority specified and TLS verification is enabled")
@@ -93,18 +94,18 @@ func (v *Validator) validateClusters(config *models.Config, result *ValidationRe
 
 func (v *Validator) validateUsers(config *models.Config, result *ValidationResult) {
 	userNames := make(map[string]bool)
-	
+
 	for _, user := range config.Users {
 		if user.Name == "" {
 			result.AddError("User", "<unnamed>", "user name is required")
 			continue
 		}
-		
+
 		if userNames[user.Name] {
 			result.AddError("User", user.Name, "duplicate user name")
 		}
 		userNames[user.Name] = true
-		
+
 		authMethods := 0
 		if user.User.ClientCertificate != "" || user.User.ClientCertificateData != "" {
 			authMethods++
@@ -127,7 +128,7 @@ func (v *Validator) validateUsers(config *models.Config, result *ValidationResul
 				result.AddError("User", user.Name, "auth provider name is required")
 			}
 		}
-		
+
 		if authMethods == 0 {
 			result.AddWarning("User", user.Name, "no authentication method configured")
 		}
@@ -136,24 +137,24 @@ func (v *Validator) validateUsers(config *models.Config, result *ValidationResul
 
 func (v *Validator) validateContexts(config *models.Config, result *ValidationResult) {
 	contextNames := make(map[string]bool)
-	
+
 	for _, context := range config.Contexts {
 		if context.Name == "" {
 			result.AddError("Context", "<unnamed>", "context name is required")
 			continue
 		}
-		
+
 		if contextNames[context.Name] {
 			result.AddError("Context", context.Name, "duplicate context name")
 		}
 		contextNames[context.Name] = true
-		
+
 		if context.Context.Cluster == "" {
 			result.AddError("Context", context.Name, "cluster reference is required")
 		} else if config.FindCluster(context.Context.Cluster) == nil {
 			result.AddError("Context", context.Name, fmt.Sprintf("references non-existent cluster '%s'", context.Context.Cluster))
 		}
-		
+
 		if context.Context.User == "" {
 			result.AddError("Context", context.Name, "user reference is required")
 		} else if config.FindUser(context.Context.User) == nil {
@@ -173,18 +174,18 @@ func (v *Validator) validateCurrentContext(config *models.Config, result *Valida
 func (v *Validator) findOrphans(config *models.Config, result *ValidationResult) {
 	usedClusters := make(map[string]bool)
 	usedUsers := make(map[string]bool)
-	
+
 	for _, context := range config.Contexts {
 		usedClusters[context.Context.Cluster] = true
 		usedUsers[context.Context.User] = true
 	}
-	
+
 	for _, cluster := range config.Clusters {
 		if !usedClusters[cluster.Name] {
 			result.AddWarning("Cluster", cluster.Name, "not referenced by any context")
 		}
 	}
-	
+
 	for _, user := range config.Users {
 		if !usedUsers[user.Name] {
 			result.AddWarning("User", user.Name, "not referenced by any context")
@@ -194,7 +195,7 @@ func (v *Validator) findOrphans(config *models.Config, result *ValidationResult)
 
 func (v *Validator) ValidateImport(existing, imported *models.Config) map[string][]string {
 	conflicts := make(map[string][]string)
-	
+
 	for _, cluster := range imported.Clusters {
 		if existingCluster := existing.FindCluster(cluster.Name); existingCluster != nil {
 			if !clustersEqual(existingCluster, &cluster) {
@@ -202,7 +203,7 @@ func (v *Validator) ValidateImport(existing, imported *models.Config) map[string
 			}
 		}
 	}
-	
+
 	for _, user := range imported.Users {
 		if existingUser := existing.FindUser(user.Name); existingUser != nil {
 			if !existingUser.User.Equals(&user.User) {
@@ -210,7 +211,7 @@ func (v *Validator) ValidateImport(existing, imported *models.Config) map[string
 			}
 		}
 	}
-	
+
 	for _, context := range imported.Contexts {
 		if existingContext := existing.FindContext(context.Name); existingContext != nil {
 			if !contextsEqual(existingContext, &context) {
@@ -218,27 +219,19 @@ func (v *Validator) ValidateImport(existing, imported *models.Config) map[string
 			}
 		}
 	}
-	
+
 	return conflicts
 }
 
+// Equality must cover every field — hand-picked comparisons went stale when
+// the model grew (tls-server-name, proxy-url, extensions, unknown extras) and
+// made imports report "no conflicts" for genuinely different entries.
 func clustersEqual(a, b *models.NamedCluster) bool {
-	if a.Name != b.Name {
-		return false
-	}
-	return a.Cluster.Server == b.Cluster.Server &&
-		a.Cluster.CertificateAuthority == b.Cluster.CertificateAuthority &&
-		a.Cluster.CertificateAuthorityData == b.Cluster.CertificateAuthorityData &&
-		a.Cluster.InsecureSkipTLSVerify == b.Cluster.InsecureSkipTLSVerify
+	return reflect.DeepEqual(a, b)
 }
 
 func contextsEqual(a, b *models.NamedContext) bool {
-	if a.Name != b.Name {
-		return false
-	}
-	return a.Context.Cluster == b.Context.Cluster &&
-		a.Context.User == b.Context.User &&
-		a.Context.Namespace == b.Context.Namespace
+	return reflect.DeepEqual(a, b)
 }
 
 func SanitizeName(name string) string {

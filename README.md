@@ -3,7 +3,9 @@
 [![Latest Release](https://img.shields.io/github/release/positronico/kkonf.svg)](https://github.com/positronico/kkonf/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/positronico/kkonf/total.svg)](https://github.com/positronico/kkonf/releases)
 
-`kkonf` is an interactive CLI tool for managing kubectl configuration files with a focus on user consolidation and simplified management of clusters, users, and contexts.
+`kkonf` is a full-screen terminal UI for managing kubectl configuration files, with
+scriptable subcommands for everyday context switching, and a focus on consolidating
+duplicate users across GKE/EKS/AKS clusters.
 
 ## 📥 Quick Download
 
@@ -13,17 +15,24 @@ Choose the appropriate binary for your platform (Linux, macOS, Windows) from the
 
 ## Features
 
-- **Interactive Menu System**: Navigate through options with arrow keys and an intuitive interface
-- **CRUD Operations**: Full Create, Read, Update, Delete support for:
-  - Clusters
-  - Users  
-  - Contexts
-- **User Consolidation**: Automatically detect and merge duplicate users with identical properties
-- **Config Validation**: Validate configuration integrity and check for broken references
-- **Import/Export**: Import from other config files and export selected items
-- **Backup Management**: Automatic backups before modifications
-- **Quick Context Switching**: Fast context switching with namespace management
-- **Beautiful Display**: Color-coded output with emoji indicators
+- **Full-screen TUI**: persistent header (file, current context, modified state),
+  filterable tables, all-fields-at-once forms with masked secrets, toast
+  notifications — no more "press Enter to continue"
+- **Number-key navigation**: `1`-`5` jump between sections; in pickers, `1`-`9`
+  select directly and `0`/`Esc` cancels
+- **Scriptable subcommands**: `kkonf ctx`, `kkonf ns`, `kkonf rename`,
+  `kkonf consolidate --dry-run`, `kkonf export`, `kkonf backup` — kubectx-style
+  one-liners for shells and CI
+- **Lossless round-trip**: unknown and future kubeconfig fields (impersonation,
+  extensions at every level, vendor extras) survive load → save untouched
+- **User consolidation**: detect users with identical auth settings and merge
+  them, rewriting every context reference
+- **Safe writes**: per-save timestamped backups, atomic temp+rename writes
+  through symlinks, file locking against concurrent writers, and detection of
+  external changes (e.g. kubectl modifying the file while kkonf is open)
+- **Import/Export**: merge another kubeconfig with conflict handling
+  (skip / replace / rename), export contexts with their dependencies
+- **Validation**: broken references, duplicates, orphans, missing auth
 
 ## Installation
 
@@ -31,19 +40,11 @@ Choose the appropriate binary for your platform (Linux, macOS, Windows) from the
 
 **→ [Go to Releases Page](https://github.com/positronico/kkonf/releases/latest) ←**
 
-1. Download the appropriate binary for your platform:
-   - **Linux**: `kkonf-v1.1.1-linux-amd64.tar.gz` or `kkonf-v1.1.1-linux-arm64.tar.gz`
-   - **macOS**: `kkonf-v1.1.1-darwin-amd64.tar.gz` or `kkonf-v1.1.1-darwin-arm64.tar.gz`  
-   - **Windows**: `kkonf-v1.1.1-windows-amd64.zip`
-
+1. Download the binary for your platform (Linux/macOS/Windows, amd64/arm64)
 2. Extract and run:
    ```bash
-   # Linux/macOS
    tar -xzf kkonf-v*.tar.gz
    ./kkonf
-   
-   # Windows
-   # Extract the .zip file and run kkonf.exe
    ```
 
 ### Option 2: Install with Go
@@ -52,7 +53,7 @@ go install github.com/positronico/kkonf@latest
 ```
 
 ### Option 3: Build from Source
-**Prerequisites:** Go 1.21 or higher
+**Prerequisites:** Go 1.24 or higher
 
 ```bash
 git clone https://github.com/positronico/kkonf.git
@@ -62,239 +63,90 @@ make build  # or: go build -o kkonf
 
 ## Usage
 
-### Basic Usage
+### Interactive TUI
 ```bash
-# Use default kubeconfig (~/.kube/config)
-kkonf
-
-# Specify a different config file
-kkonf -f /path/to/config
-
-# Disable colored output
-kkonf --no-color
+kkonf                     # default kubeconfig (~/.kube/config)
+kkonf -f /path/to/config  # a specific file
 ```
 
-## Screenshots
-
-### Main Menu
 ```
-⚙️ kkonf v1.1.1 - kubectl Config Manager
-
-📁 Config file: /Users/user/.kube/config
-🎯 Current context: production-cluster
-✓ Status: Saved
-
-? Select option: 
-  ❯ 1. 🏢 Clusters (3)
-    2. 👤 Users (5) 
-    3. 🌐 Contexts (4)
-    4. 🔧 Tools
-    5. ⚙️ Settings
-    6. 💾 Save Configuration
-    0. 🚪 Exit
+┌ kkonf v2.0.0 │ ~/.kube/config │ ctx: prod-east │ saved ──────────┐
+│ [1 Clusters] [2 Users] [3 Contexts] [4 Tools] [5 Settings]       │
+│                                                                  │
+│    Name          Cluster        User        Namespace            │
+│  ● prod-east     prod-east      exec-user   payments             │
+│    dev           dev-local      token-user  default              │
+│                                                                  │
+│ ✓ Current context: prod-east                                     │
+└ enter/s switch  n namespace  a add  e edit  r rename  d delete ──┘
 ```
 
-### Cluster Management
-```
-🏢 Cluster Management
+The TUI opens on the **Contexts** screen, so switching context is: arrow (or
+`/` to filter) + `Enter`. Changes stay in memory until you save.
 
-┌────┬─────────────────────┬─────────────────────────┬────────┐
-│ #  │ Name                │ Server                  │ Secure │
-├────┼─────────────────────┼─────────────────────────┼────────┤
-│ 1  │ production-cluster  │ https://10.0.0.1:6443   │ Yes    │
-│ 2  │ staging-cluster     │ https://10.0.0.2:6443   │ Yes    │
-│ 3  │ dev-cluster         │ http://localhost:8080    │ No     │
-└────┴─────────────────────┴─────────────────────────┴────────┘
+| Key | Action |
+|-----|--------|
+| `1`-`5` | Jump to Clusters / Users / Contexts / Tools / Settings |
+| `Enter`/`s` | Switch current context (Contexts screen) |
+| `a` `e` `r` `d` | Add / Edit / Rename / Delete the selected entry |
+| `v` | View details (Clusters, Users) |
+| `n` | Set namespace (Contexts) |
+| `c` | Consolidate duplicate users (Users) |
+| `/` | Filter the table |
+| `Ctrl+S` | Save (validates first, warns on external changes) |
+| `q`/`Esc` | Quit (prompts to save or discard changes) |
+| `1`-`9`, `0` | In pickers: select option N directly, `0` cancels |
 
-? Select action:
-  ❯ 1. ➕ Add Cluster
-    2. ✏️ Edit Cluster
-    3. 🗑️ Delete Cluster
-    4. 👁️ View Details
-    0. ← Back
-```
-
-### User Consolidation
-```
-🔄 User Consolidation
-
-Found duplicate users:
-
-Group 1: GKE Authentication (3 duplicates)
-  - gke_project1_cluster1
-  - gke_project1_cluster2  
-  - gke_project2_cluster1
-  
-  Auth Method: exec (gke-gcloud-auth-plugin)
-  Used by contexts: prod-gke, staging-gke, dev-gke
-
-? Consolidate this group? Yes
-? New user name: gke-user
-
-✓ Consolidated 3 users into 'gke-user'
-✓ Updated 3 context references
+### Subcommands (non-interactive)
+```bash
+kkonf ctx                        # list contexts (current marked with *)
+kkonf ctx staging                # switch context
+kkonf ns payments                # set namespace of the current context
+kkonf rename cluster old new     # rename + update all references
+kkonf consolidate --dry-run      # preview duplicate-user merging
+kkonf consolidate                # merge duplicate users and save
+kkonf export -o team.yaml prod   # export a context with its cluster + user
+kkonf backup list                # list timestamped backups
+kkonf backup restore             # roll back to the newest backup
 ```
 
-### Tools Menu
-```
-🔧 Tools
-
-? Select tool:
-  ❯ 1. ✓ Validate Configuration
-    2. 🔄 Consolidate Duplicate Users
-    3. 📥 Import Configuration
-    4. 📤 Export Configuration
-    5. ⚡ Quick Context Switch
-    6. 🗑️ Clean Old Backups
-    0. ← Back
-```
-
-## Main Menu Options
-
-1. **🏢 Clusters**: Manage cluster configurations
-   - Add new clusters
-   - Edit existing clusters (server URL, certificates, TLS settings)
-   - Delete clusters (with dependency checking)
-   - View cluster details
-
-2. **👤 Users**: Manage user authentication
-   - Add users with various auth methods:
-     - Exec (command-based authentication)
-     - Token (direct or file-based)
-     - Certificate (base64 or file paths)
-     - Basic authentication (username/password)
-   - Edit user authentication settings
-   - Delete users (with dependency checking)
-   - Consolidate duplicate users
-
-3. **🌐 Contexts**: Manage context configurations
-   - Add new contexts (linking clusters and users)
-   - Edit context settings
-   - Delete contexts
-   - Switch current context
-   - Set namespace for contexts
-
-4. **🔧 Tools**: Additional utilities
-   - Validate configuration
-   - Consolidate duplicate users
-   - Import configurations
-   - Export configurations
-   - Quick context switch
-   - Clean old backups
-
-5. **⚙️ Settings**: Application settings (coming soon)
+All subcommands honor `-f/--file` and generate shell completion via
+`kkonf completion bash|zsh|fish`.
 
 ## User Consolidation
 
-One of kkonf's key features is the ability to consolidate duplicate users. This is particularly useful when managing multiple GKE/EKS/AKS clusters that use the same authentication method.
+Managing many GKE/EKS/AKS clusters usually leaves you with one identical
+exec-auth user per cluster. kkonf groups users whose entire definition is
+identical and merges each group into one user, updating every context:
 
-### How it works:
-1. kkonf scans all users and groups those with identical properties
-2. You select which groups to consolidate
-3. Choose a new name for the consolidated user
-4. All context references are automatically updated
-
-### Example:
-Before consolidation:
-```yaml
-users:
-- name: gke_project1_cluster1
-  user:
-    exec:
-      command: gke-gcloud-auth-plugin
-      ...
-- name: gke_project1_cluster2
-  user:
-    exec:
-      command: gke-gcloud-auth-plugin
-      ...
-- name: gke_project2_cluster1
-  user:
-    exec:
-      command: gke-gcloud-auth-plugin
-      ...
+```bash
+$ kkonf consolidate --dry-run
+Would consolidate [gke_p1_c1 gke_p1_c2 gke_p2_c1] into "gke-user" (exec auth)
 ```
 
-After consolidation:
-```yaml
-users:
-- name: gke-user
-  user:
-    exec:
-      command: gke-gcloud-auth-plugin
-      ...
-```
+In the TUI: Users screen (`2`), then `c`.
 
-All contexts are automatically updated to reference `gke-user`.
+## Safety Model
 
-## Import/Export
+- Every save first copies the current file to `config.bak.YYYYMMDD-HHMMSS`
+  (each save gets its own backup file)
+- Writes are atomic (temp file + rename), preserve the original file's
+  permissions, and follow symlinks instead of replacing them
+- A lock file serializes concurrent writers; stale locks from crashed
+  processes are broken automatically
+- If another tool changed the file since kkonf loaded it, saving asks before
+  overwriting
+- `kkonf backup restore` backs up the current state before restoring, so a
+  restore is itself undoable
+- Backup cleanup keeps everything newer than the retention window **and** the
+  newest N backups regardless of age (configurable in Settings)
 
-### Import Options:
-- **Skip conflicts**: Import only non-conflicting items
-- **Replace**: Overwrite existing items with imported ones
-- **Rename**: Import conflicting items with new names
-- **Interactive**: Decide for each conflict individually
+## Known Limitations
 
-### Export Options:
-- **Selected items**: Choose specific clusters, users, and contexts
-- **All**: Export entire configuration
-- **Current context**: Export current context with its dependencies
-
-## Configuration Validation
-
-kkonf automatically validates your configuration to detect:
-- Missing cluster or user references in contexts
-- Invalid server URLs
-- Duplicate names
-- Orphaned clusters or users (not referenced by any context)
-- Missing authentication methods
-
-## Backup Management
-
-- Automatic backup creation before any modification
-- Backups are timestamped: `config.bak.YYYYMMDD-HHMMSS`
-- Clean old backups through the Tools menu
-- Manual restore available if needed
-
-## Color Scheme & Icons
-
-- **🏢 Blue**: Clusters
-- **👤 Green**: Users
-- **🌐 Yellow**: Contexts
-- **Bold with asterisk (*)**: Current context
-- **Red**: Errors
-- **Orange**: Warnings
-
-## Navigation
-
-- **Arrow Keys**: Navigate menu options
-- **Enter**: Select option
-- **ESC**: Go back
-- **Numbers**: Quick selection in numbered lists
-
-## Security Considerations
-
-- Config files are saved with `0600` permissions (read/write for owner only)
-- Sensitive data (tokens, certificates) are handled carefully
-- Backups maintain the same permissions as the original file
-- No data is sent to external services
-
-## Future Enhancements
-
-The following features are planned for future releases:
-
-- **Cloud Integration**: Direct integration with GKE/EKS/AKS for automatic cluster discovery
-- **kubectl Plugin**: Install as a kubectl plugin (`kubectl kkonf`)
-- **Config Templates**: Pre-defined templates for common setups
-- **Multi-file Management**: Support for multiple config files and merging
-- **Remote Sync**: Synchronize configurations across multiple machines
-- **Live Validation**: Real-time validation using Kubernetes API
-- **Config Encryption**: Encrypt sensitive configuration data
-- **Audit Logging**: Track all configuration changes
-- **Undo/Redo**: Ability to undo recent changes
-- **Config Diff Tools**: Compare configurations and show differences
-- **Settings Persistence**: User preferences and application settings
-- **Namespace Discovery**: Auto-discover available namespaces from clusters
+- YAML comments and anchors/aliases are not preserved on save (kubectl drops
+  them too); all field *content* — including unknown fields — is preserved
+- Users authenticated via the legacy `auth-provider` field are shown and can
+  be renamed/deleted, but not edited (editing would convert them)
 
 ## Contributing
 
@@ -303,7 +155,3 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 ## License
 
 MIT License - See LICENSE file for details
-
-## Support
-
-For issues, questions, or suggestions, please open an issue on the GitHub repository.

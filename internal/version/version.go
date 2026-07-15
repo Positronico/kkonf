@@ -35,7 +35,7 @@ func Get() Info {
 			if info.Main.Version != "(devel)" && info.Main.Version != "" {
 				version = info.Main.Version
 			}
-			
+
 			// Try to get commit and build info from VCS
 			for _, setting := range info.Settings {
 				switch setting.Key {
